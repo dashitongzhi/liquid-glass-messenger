@@ -1,0 +1,120 @@
+import SwiftUI
+
+struct SettingsView: View {
+    @EnvironmentObject private var store: MessengerStore
+
+    var body: some View {
+        Form {
+            Section("Connection") {
+                Picker("Mode", selection: $store.bridgeConfig.mode) {
+                    ForEach(WeChatMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+
+                LabeledContent("State") {
+                    connectionStateLabel
+                }
+
+                Button {
+                    Task { await store.refreshFromWeChat() }
+                } label: {
+                    Label("Check Bridge", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+
+            Section("Official Credentials") {
+                TextField("AppID", text: $store.bridgeConfig.appID)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("AppSecret", text: $store.bridgeConfig.appSecret)
+                TextField("Token", text: $store.bridgeConfig.token)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("EncodingAESKey", text: $store.bridgeConfig.encodingAESKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+
+            Section("Endpoints") {
+                TextField("Webhook URL", text: $store.bridgeConfig.webhookURL)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                TextField("API Base URL", text: $store.bridgeConfig.apiBaseURL)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+            }
+
+            Section("Capabilities") {
+                ForEach(store.capabilities) { capability in
+                    CapabilityRow(capability: capability)
+                }
+            }
+        }
+        .navigationTitle("WeChat Bridge")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private var connectionStateLabel: some View {
+        switch store.connectionState {
+        case .ready:
+            Text("Ready").foregroundStyle(.secondary)
+        case .checking:
+            ProgressView()
+        case .connected(let date):
+            Text("Connected \(ChatFormatters.shortTime.string(from: date))")
+                .foregroundStyle(LGDesign.weChatGreen)
+        case .failed(let message):
+            Text(message)
+                .foregroundStyle(.red)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+private struct CapabilityRow: View {
+    let capability: WeChatCapability
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(systemName: symbol)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 24)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(capability.name)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(capability.detail)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    var symbol: String {
+        switch capability.status {
+        case .available: "checkmark.circle.fill"
+        case .requiresCredential: "key.fill"
+        case .unsupportedPublicAPI: "exclamationmark.triangle.fill"
+        }
+    }
+
+    var color: Color {
+        switch capability.status {
+        case .available: LGDesign.weChatGreen
+        case .requiresCredential: .orange
+        case .unsupportedPublicAPI: .red
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        SettingsView()
+            .environmentObject(MessengerStore())
+    }
+}

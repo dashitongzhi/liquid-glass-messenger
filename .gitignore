@@ -1,0 +1,7 @@
+.build/
+dist/
+.DS_Store
+*.xcuserdata/
+DerivedData/
+DerivedDataDevice/
+screenshots/*.png
