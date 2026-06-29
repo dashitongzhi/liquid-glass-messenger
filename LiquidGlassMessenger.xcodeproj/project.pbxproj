@@ -19,6 +19,7 @@
 		A0010000000000000000000A /* ComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0020000000000000000000A /* ComposerView.swift */; };
 		A0010000000000000000000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0020000000000000000000B /* SettingsView.swift */; };
 		A0010000000000000000000C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0020000000000000000000C /* Components.swift */; };
+		A0010000000000000000000E /* WeChatOpenSDKBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0020000000000000000000E /* WeChatOpenSDKBridge.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,8 @@
 		A0020000000000000000000B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A0020000000000000000000C /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		A0020000000000000000000D /* LiquidGlassMessenger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LiquidGlassMessenger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0020000000000000000000E /* WeChatOpenSDKBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeChatOpenSDKBridge.swift; sourceTree = "<group>"; };
+		A0020000000000000000000F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +66,7 @@
 				A00200000000000000000002 /* Models.swift */,
 				A00200000000000000000003 /* MessengerStore.swift */,
 				A00200000000000000000004 /* WeChatBridge.swift */,
+				A0020000000000000000000E /* WeChatOpenSDKBridge.swift */,
 				A00200000000000000000005 /* DemoData.swift */,
 				A00200000000000000000006 /* DesignSystem.swift */,
 				A00200000000000000000007 /* ContentView.swift */,
@@ -71,6 +75,7 @@
 				A0020000000000000000000A /* ComposerView.swift */,
 				A0020000000000000000000B /* SettingsView.swift */,
 				A0020000000000000000000C /* Components.swift */,
+				A0020000000000000000000F /* Info.plist */,
 			);
 			path = LiquidGlassMessenger;
 			sourceTree = "<group>";
@@ -155,6 +160,7 @@
 				A00100000000000000000002 /* Models.swift in Sources */,
 				A00100000000000000000003 /* MessengerStore.swift in Sources */,
 				A00100000000000000000004 /* WeChatBridge.swift in Sources */,
+				A0010000000000000000000E /* WeChatOpenSDKBridge.swift in Sources */,
 				A00100000000000000000005 /* DemoData.swift in Sources */,
 				A00100000000000000000006 /* DesignSystem.swift in Sources */,
 				A00100000000000000000007 /* ContentView.swift in Sources */,
@@ -235,12 +241,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2HD5836RZ2;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Liquid Glass";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIRequiresFullScreen = NO;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiquidGlassMessenger/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Kral.LiquidGlassMessenger;
@@ -249,6 +251,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+				WECHAT_APP_URL_SCHEME = wxReplaceWithOpenPlatformAppID;
 			};
 			name = Debug;
 		};
@@ -260,12 +263,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2HD5836RZ2;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Liquid Glass";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIRequiresFullScreen = NO;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiquidGlassMessenger/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Kral.LiquidGlassMessenger;
@@ -274,6 +273,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+				WECHAT_APP_URL_SCHEME = wxReplaceWithOpenPlatformAppID;
 			};
 			name = Release;
 		};
