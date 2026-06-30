@@ -40,7 +40,6 @@ struct ChatThreadView: View {
                     .padding(.bottom, 24)
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .ignoresSafeArea(edges: .bottom)
                 .onChange(of: conversation.messages.count) { _, _ in
                     if let last = conversation.messages.last?.id {
                         withAnimation(.snappy) {
@@ -50,18 +49,15 @@ struct ChatThreadView: View {
                 }
             }
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                ComposerView()
-            }
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-
             PreviewTopBar(
                 conversation: conversation,
                 participants: otherParticipants,
                 onBack: { dismiss() },
                 onMore: { showDetails = true }
             )
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ComposerView()
         }
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
