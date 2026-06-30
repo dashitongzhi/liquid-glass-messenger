@@ -26,6 +26,9 @@ private struct WeChatAPIResult: Decodable {
 
 enum WeChatBridgeError: LocalizedError {
     case missingCredentials
+    case missingOpenSDKConfiguration
+    case invalidShareURL
+    case openSDKUnavailable
     case unsupportedPrivateProtocol(String)
     case invalidURL
     case apiError(String)
@@ -34,6 +37,12 @@ enum WeChatBridgeError: LocalizedError {
         switch self {
         case .missingCredentials:
             "WeChat credentials are missing. Add official AppID and AppSecret in Settings."
+        case .missingOpenSDKConfiguration:
+            "WeChat OpenSDK needs an AppID and Universal Link before sharing."
+        case .invalidShareURL:
+            "The WeChat link card URL must be a valid http or https URL."
+        case .openSDKUnavailable:
+            "WeChat OpenSDK is not linked in this build. Add the official SDK to enable native sharing."
         case .unsupportedPrivateProtocol(let feature):
             "\(feature) is not exposed through public WeChat APIs."
         case .invalidURL:
@@ -46,6 +55,12 @@ enum WeChatBridgeError: LocalizedError {
 
 actor WeChatBridge {
     static let defaultCapabilities: [WeChatCapability] = [
+        .init(
+            id: "open-sdk-link-share",
+            name: "OpenSDK Link Share",
+            detail: "Native WeChat link-card sharing through AppID, URL scheme, and Universal Links.",
+            status: .requiresCredential
+        ),
         .init(
             id: "oauth-login",
             name: "WeChat OAuth Login",
@@ -101,6 +116,9 @@ actor WeChatBridge {
             var item = item
             if item.status == .requiresCredential {
                 item.status = .available
+            }
+            if item.id == "open-sdk-link-share", !config.isOpenSDKConfigured {
+                item.status = .requiresCredential
             }
             return item
         })

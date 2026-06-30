@@ -15,6 +15,8 @@ Messages/iMessage without bundling proprietary Apple or WeChat assets.
 - WeChat bridge architecture for official WeChat/WeCom/Open Platform endpoints.
 - Settings surface for app id, secret, token, encoding AES key, webhook URL, and
   connection mode.
+- Official WeChat link-card configuration surface for AppID, Universal Link,
+  share title, description, URL, thumbnail asset name, and WeChat share targets.
 - Offline demo data so the app can be inspected immediately.
 
 ## Important boundary
@@ -23,6 +25,26 @@ Personal WeChat full chat sync, Moments, payments, arbitrary contact access, and
 private message transport are not available through ordinary public APIs. The
 app exposes a replaceable `WeChatBridge` layer for official integrations and
 marks unsupported private-protocol surfaces explicitly.
+
+The project intentionally does not include a WeChat IPA hook, injected dynamic
+library, anti-recall tweak, envelope automation, location spoofing, or a
+modified personal WeChat client. Those approaches are useful only as reverse
+engineering references and are not part of the public app.
+
+## Official WeChat Setup
+
+The SwiftUI app is prepared for the official WeChat OpenSDK link-card path:
+
+1. Register the app in WeChat Open Platform and obtain the production AppID.
+2. Configure the production Universal Link domain in WeChat Open Platform.
+3. Set `WECHAT_APP_URL_SCHEME` in `LiquidGlassMessenger.xcodeproj` to the
+   WeChat URL scheme, usually the AppID such as `wx123...`.
+4. Add/link the official WeChat OpenSDK so `canImport(WechatOpenSDK)` is true.
+5. In the app Settings screen, fill AppID, Universal Link, and the link card
+   title/summary/URL/thumbnail asset.
+
+Without the OpenSDK linked, the app still builds and shows the configuration
+surface, but native share buttons report that the SDK is unavailable.
 
 ## Run
 

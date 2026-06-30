@@ -103,11 +103,47 @@ enum WeChatCapabilityStatus: String, Codable {
     case unsupportedPublicAPI
 }
 
+enum WeChatShareTarget: String, CaseIterable, Identifiable, Codable {
+    case session
+    case timeline
+    case favorite
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .session: "WeChat Chat"
+        case .timeline: "Moments"
+        case .favorite: "Favorites"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .session: "message.fill"
+        case .timeline: "circle.grid.2x2.fill"
+        case .favorite: "star.fill"
+        }
+    }
+}
+
 struct WeChatCapability: Identifiable, Hashable, Codable {
     let id: String
     var name: String
     var detail: String
     var status: WeChatCapabilityStatus
+}
+
+struct WeChatLinkPreview: Hashable, Codable {
+    var title: String = "Liquid Glass Messenger"
+    var summary: String = "A native SwiftUI chat experience with an official WeChat bridge."
+    var webpageURL: String = "https://github.com/dashitongzhi/liquid-glass-messenger"
+    var thumbnailAssetName: String = ""
+
+    var isValid: Bool {
+        guard let url = URL(string: webpageURL.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
+        return url.scheme?.hasPrefix("http") == true && url.host != nil
+    }
 }
 
 struct WeChatBridgeConfig: Codable, Hashable {
@@ -118,10 +154,18 @@ struct WeChatBridgeConfig: Codable, Hashable {
     var encodingAESKey: String = ""
     var webhookURL: String = "https://example.com/wechat/webhook"
     var apiBaseURL: String = "https://api.weixin.qq.com"
+    var universalLink: String = "https://example.com/app/wechat/"
+    var linkPreview = WeChatLinkPreview()
 
     var isCredentialed: Bool {
         !appID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !appSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var isOpenSDKConfigured: Bool {
+        let appID = appID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let universalLink = universalLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !appID.isEmpty && URL(string: universalLink)?.scheme?.hasPrefix("http") == true
     }
 }
 
