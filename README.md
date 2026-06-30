@@ -15,6 +15,8 @@ Messages/iMessage without bundling proprietary Apple or WeChat assets.
 - WeChat bridge architecture for official WeChat/WeCom/Open Platform endpoints.
 - Settings surface for app id, secret, token, encoding AES key, webhook URL, and
   connection mode.
+- `PluginGlassKit`, an Objective-C/UIKit Liquid Glass UI layer for Theos-style
+  WeChat tweak projects that need the same floating glass controls.
 - Offline demo data so the app can be inspected immediately.
 
 ## Important boundary
