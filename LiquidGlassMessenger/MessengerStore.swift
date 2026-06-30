@@ -10,9 +10,11 @@ final class MessengerStore: ObservableObject {
     @Published var isAppDrawerVisible = false
     @Published var bridgeConfig = WeChatBridgeConfig()
     @Published var connectionState: BridgeConnectionState = .ready
+    @Published var shareState: BridgeConnectionState = .ready
     @Published var capabilities: [WeChatCapability] = WeChatBridge.defaultCapabilities
 
     private let bridge = WeChatBridge()
+    private let openSDKBridge = WeChatOpenSDKBridge()
 
     init() {
         selectedConversationID = conversations.first?.id
@@ -79,6 +81,16 @@ final class MessengerStore: ObservableObject {
             connectionState = .connected(Date())
         } catch {
             connectionState = .failed(error.localizedDescription)
+        }
+    }
+
+    func shareOfficialLink(to target: WeChatShareTarget) {
+        shareState = .checking
+        do {
+            try openSDKBridge.shareLink(config: bridgeConfig, target: target)
+            shareState = .connected(Date())
+        } catch {
+            shareState = .failed(error.localizedDescription)
         }
     }
 }
