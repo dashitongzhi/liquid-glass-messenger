@@ -43,6 +43,34 @@ struct SettingsView: View {
                 TextField("API Base URL", text: $store.bridgeConfig.apiBaseURL)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
+                TextField("Universal Link", text: $store.bridgeConfig.universalLink)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+            }
+
+            Section("Official Link Card") {
+                TextField("Card Title", text: $store.bridgeConfig.linkPreview.title)
+                    .textInputAutocapitalization(.sentences)
+                TextField("Card Summary", text: $store.bridgeConfig.linkPreview.summary, axis: .vertical)
+                    .lineLimit(2...4)
+                TextField("Link URL", text: $store.bridgeConfig.linkPreview.webpageURL)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                TextField("Thumbnail Asset Name", text: $store.bridgeConfig.linkPreview.thumbnailAssetName)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                LabeledContent("Share State") {
+                    shareStateLabel
+                }
+
+                ForEach(WeChatShareTarget.allCases) { target in
+                    Button {
+                        store.shareOfficialLink(to: target)
+                    } label: {
+                        Label("Share to \(target.title)", systemImage: target.systemImage)
+                    }
+                }
             }
 
             Section("Capabilities") {
@@ -64,6 +92,23 @@ struct SettingsView: View {
             ProgressView()
         case .connected(let date):
             Text("Connected \(ChatFormatters.shortTime.string(from: date))")
+                .foregroundStyle(LGDesign.weChatGreen)
+        case .failed(let message):
+            Text(message)
+                .foregroundStyle(.red)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    @ViewBuilder
+    private var shareStateLabel: some View {
+        switch store.shareState {
+        case .ready:
+            Text("Ready").foregroundStyle(.secondary)
+        case .checking:
+            ProgressView()
+        case .connected(let date):
+            Text("Sent \(ChatFormatters.shortTime.string(from: date))")
                 .foregroundStyle(LGDesign.weChatGreen)
         case .failed(let message):
             Text(message)
