@@ -17,6 +17,8 @@ Messages/iMessage without bundling proprietary Apple or WeChat assets.
   connection mode.
 - Official WeChat link-card configuration surface for AppID, Universal Link,
   share title, description, URL, thumbnail asset name, and WeChat share targets.
+- `PluginGlassKit`, an Objective-C/UIKit Liquid Glass UI layer for Theos-style
+  WeChat tweak projects that need the same floating glass controls.
 - Offline demo data so the app can be inspected immediately.
 
 ## Important boundary

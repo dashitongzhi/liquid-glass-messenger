@@ -1,0 +1,9 @@
+Package: com.kral.liquidglassdemo
+Name: LiquidGlassDemo
+Version: 0.1-1
+Architecture: iphoneos-arm
+Description: Liquid Glass UI layer demo for WeChat tweaks
+Maintainer: Kral
+Author: Kral
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 14.0)
