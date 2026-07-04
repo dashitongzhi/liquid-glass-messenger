@@ -90,9 +90,15 @@ struct SettingsView: View {
             Text("Ready").foregroundStyle(.secondary)
         case .checking:
             ProgressView()
+        case .waitingForCallback:
+            Text("Waiting").foregroundStyle(.secondary)
         case .connected(let date):
             Text("Connected \(ChatFormatters.shortTime.string(from: date))")
                 .foregroundStyle(LGDesign.weChatGreen)
+        case .cancelled(let message):
+            Text(message)
+                .foregroundStyle(.orange)
+                .multilineTextAlignment(.trailing)
         case .failed(let message):
             Text(message)
                 .foregroundStyle(.red)
@@ -107,9 +113,16 @@ struct SettingsView: View {
             Text("Ready").foregroundStyle(.secondary)
         case .checking:
             ProgressView()
+        case .waitingForCallback(let date):
+            Text("Waiting for WeChat \(ChatFormatters.shortTime.string(from: date))")
+                .foregroundStyle(.secondary)
         case .connected(let date):
-            Text("Sent \(ChatFormatters.shortTime.string(from: date))")
+            Text("Confirmed \(ChatFormatters.shortTime.string(from: date))")
                 .foregroundStyle(LGDesign.weChatGreen)
+        case .cancelled(let message):
+            Text(message)
+                .foregroundStyle(.orange)
+                .multilineTextAlignment(.trailing)
         case .failed(let message):
             Text(message)
                 .foregroundStyle(.red)

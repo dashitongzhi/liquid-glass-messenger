@@ -25,24 +25,39 @@ private struct WeChatAPIResult: Decodable {
 }
 
 enum WeChatBridgeError: LocalizedError {
+    case demoOpenSDKShareBlocked
     case missingCredentials
     case missingOpenSDKConfiguration
+    case placeholderURLScheme(String)
+    case missingConfiguredURLScheme(String)
     case invalidShareURL
     case openSDKUnavailable
+    case shareRequestRejected
+    case callbackNotHandled
     case unsupportedPrivateProtocol(String)
     case invalidURL
     case apiError(String)
 
     var errorDescription: String? {
         switch self {
+        case .demoOpenSDKShareBlocked:
+            "Demo mode does not invoke WeChat OpenSDK. Switch to Open Platform mode and configure a production AppID, Universal Link, and URL scheme."
         case .missingCredentials:
             "WeChat credentials are missing. Add official AppID and AppSecret in Settings."
         case .missingOpenSDKConfiguration:
             "WeChat OpenSDK needs an AppID and Universal Link before sharing."
+        case .placeholderURLScheme(let scheme):
+            "Replace the placeholder WECHAT_APP_URL_SCHEME (\(scheme)) before using WeChat OpenSDK outside demo mode."
+        case .missingConfiguredURLScheme(let scheme):
+            "Info.plist must register the WeChat URL scheme \(scheme) for OpenSDK callbacks."
         case .invalidShareURL:
             "The WeChat link card URL must be a valid http or https URL."
         case .openSDKUnavailable:
             "WeChat OpenSDK is not linked in this build. Add the official SDK to enable native sharing."
+        case .shareRequestRejected:
+            "WeChat OpenSDK rejected the share request before opening WeChat."
+        case .callbackNotHandled:
+            "WeChat OpenSDK did not handle the callback URL."
         case .unsupportedPrivateProtocol(let feature):
             "\(feature) is not exposed through public WeChat APIs."
         case .invalidURL:
