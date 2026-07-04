@@ -32,6 +32,8 @@ PluginGlassKit/
     LGGlassFloatingBar.h/.m
   Examples/Theos/
     Makefile
+    README.md
+    smoke.sh
     Tweak.xm
     LiquidGlassDemo.plist
     control
@@ -39,41 +41,73 @@ PluginGlassKit/
 
 ## Copy Into An Existing Tweak
 
-1. Copy `PluginGlassKit/Sources` into your tweak repo, for example `GlassKit/`.
+1. Copy `PluginGlassKit/Sources/*` into your tweak repo, for example
+   `GlassKit/`.
 2. Add the files to the Theos target:
 
 ```makefile
-$(TWEAK_NAME)_FILES = $(shell find . -name "*.m" -o -name "*.xm")
-$(TWEAK_NAME)_CFLAGS += -fobjc-arc -Wno-deprecated-declarations
+PLUGIN_GLASS_KIT_SOURCE_DIR ?= GlassKit
+PLUGIN_GLASS_KIT_FILES := \
+    $(PLUGIN_GLASS_KIT_SOURCE_DIR)/LGGlassStyle.m \
+    $(PLUGIN_GLASS_KIT_SOURCE_DIR)/LGGlassView.m \
+    $(PLUGIN_GLASS_KIT_SOURCE_DIR)/LGGlassButton.m \
+    $(PLUGIN_GLASS_KIT_SOURCE_DIR)/LGGlassFloatingBar.m
+
+$(TWEAK_NAME)_FILES += Tweak.xm $(PLUGIN_GLASS_KIT_FILES)
+$(TWEAK_NAME)_CFLAGS += -fobjc-arc -Wno-deprecated-declarations -I$(PLUGIN_GLASS_KIT_SOURCE_DIR)
 $(TWEAK_NAME)_FRAMEWORKS += UIKit QuartzCore
 ```
 
 3. Import the bar where you own the UI surface:
 
 ```objc
-#import "GlassKit/LGGlassFloatingBar.h"
+#import <LGGlassFloatingBar.h>
 ```
 
-4. Attach it to the target view:
+4. Copy the `LGKBuildFloatingBar` and `LGKMountFloatingBarInHostView` helpers
+   from `Examples/Theos/Tweak.xm`, then replace the host controller and
+   lifecycle method with the real surface from your tweak:
 
 ```objc
-LGGlassButton *reply = [LGGlassButton chipButtonWithTitle:@"快捷回复" symbolName:nil];
-LGGlassButton *camera = [LGGlassButton chipButtonWithTitle:@"拍摄" symbolName:@"camera.fill"];
-LGGlassFloatingBar *bar = [[LGGlassFloatingBar alloc] initWithQuickActions:@[reply, camera]];
-[bar attachToView:controller.view keyboardAware:YES];
+%hook YourHostViewController
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    LGKMountFloatingBarInHostView(self.view);
+}
+%end
 ```
+
+The helper uses a stable view tag so repeated lifecycle calls do not add
+duplicate bars.
 
 ## Example
 
 `Examples/Theos` is a small tweak demo that mirrors the structure of the three
-reference repositories. It hooks `AppDelegate` only to show where the glass UI
-could be mounted. For real work, mount the bar in a specific WeChat controller
-or plugin-owned panel so it does not cover unrelated screens.
+reference repositories. It stays buildable by hooking `AppDelegate`, but that
+hook is explicitly marked as a replacement point. For real work, replace it
+with a specific WeChat controller or plugin-owned panel so the bar does not
+cover unrelated screens.
+
+Run the local smoke check first. It does not require Theos unless `THEOS` is
+already configured:
+
+```bash
+cd PluginGlassKit/Examples/Theos
+make smoke
+```
 
 ```bash
 cd PluginGlassKit/Examples/Theos
 make package
 ```
+
+The example `Makefile` supports these drop-in knobs:
+
+- `TWEAK_NAME`: package target name, default `LiquidGlassDemo`.
+- `PLUGIN_GLASS_KIT_SOURCE_DIR`: folder containing the copied glass `.h/.m`
+  files, default `../../Sources` in this repository.
+- `SCHEME=rootless` or `SCHEME=roothide`: forwards to the matching Theos
+  package scheme.
 
 ## Visual Notes
 

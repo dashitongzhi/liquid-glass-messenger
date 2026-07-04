@@ -1,7 +1,9 @@
 #import <UIKit/UIKit.h>
-#import "../../Sources/LGGlassFloatingBar.h"
+#import <LGGlassFloatingBar.h>
 
-static LGGlassFloatingBar *LGDemoFloatingBar(void) {
+static const NSInteger LGKDropInFloatingBarTag = 26063001;
+
+static LGGlassFloatingBar *LGKBuildFloatingBar(void) {
     LGGlassButton *reply = [LGGlassButton chipButtonWithTitle:@"快捷回复" symbolName:nil];
     LGGlassButton *glass = [LGGlassButton chipButtonWithTitle:@"液态 Glass" symbolName:nil];
     LGGlassButton *camera = [LGGlassButton chipButtonWithTitle:@"拍摄" symbolName:@"camera.fill"];
@@ -10,7 +12,17 @@ static LGGlassFloatingBar *LGDemoFloatingBar(void) {
     return [[LGGlassFloatingBar alloc] initWithQuickActions:@[reply, glass, camera, file, add]];
 }
 
-static UIView *LGDemoVisibleRootView(void) {
+static void LGKMountFloatingBarInHostView(UIView *hostView) {
+    if (!hostView || [hostView viewWithTag:LGKDropInFloatingBarTag]) {
+        return;
+    }
+
+    LGGlassFloatingBar *bar = LGKBuildFloatingBar();
+    bar.tag = LGKDropInFloatingBarTag;
+    [bar attachToView:hostView keyboardAware:YES];
+}
+
+static UIView *LGKDemoVisibleRootView(void) {
     UIWindow *keyWindow = UIApplication.sharedApplication.keyWindow;
     if (!keyWindow) {
         for (UIWindow *window in UIApplication.sharedApplication.windows) {
@@ -23,24 +35,31 @@ static UIView *LGDemoVisibleRootView(void) {
     return keyWindow.rootViewController.view ?: keyWindow;
 }
 
-static void LGDemoInstallFloatingBar(void) {
-    UIView *host = LGDemoVisibleRootView();
-    if (!host || [host viewWithTag:26063001]) return;
-
-    LGGlassFloatingBar *bar = LGDemoFloatingBar();
-    bar.tag = 26063001;
-    [bar attachToView:host keyboardAware:YES];
+static void LGKDemoMountOnVisibleRoot(void) {
+    LGKMountFloatingBarInHostView(LGKDemoVisibleRootView());
 }
 
-// Demo-only entry point: installs the glass bar after WeChat finishes launching.
-// For a real plugin, call LGDemoInstallFloatingBar from the specific controller
-// or feature surface you own instead of globally adding it to every screen.
+// DROP-IN REPLACEMENT POINT:
+// Replace this demo AppDelegate hook with the host controller and mount timing
+// owned by your tweak, then call LGKMountFloatingBarInHostView(self.view).
+// For example:
+//
+// %hook YourHostViewController
+// - (void)viewDidAppear:(BOOL)animated {
+//     %orig;
+//     LGKMountFloatingBarInHostView(self.view);
+// }
+// %end
+//
+// The AppDelegate fallback below keeps this folder buildable as a standalone
+// Theos smoke target, but real WCDuang/wctodo-style tweaks should mount in a
+// specific chat, panel, or plugin-owned view instead of every WeChat screen.
 %hook AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     BOOL result = %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        LGDemoInstallFloatingBar();
+        LGKDemoMountOnVisibleRoot();
     });
     return result;
 }
