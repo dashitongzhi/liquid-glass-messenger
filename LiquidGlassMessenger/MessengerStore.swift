@@ -15,9 +15,21 @@ final class MessengerStore: ObservableObject {
 
     private let bridge = WeChatBridge()
     private let openSDKBridge = WeChatOpenSDKBridge()
+    private var lastWeChatCallback: (key: String, date: Date)?
 
     init() {
         selectedConversationID = conversations.first?.id
+        openSDKBridge.onShareResponse = { [weak self] callback in
+            self?.applyWeChatShareCallback(callback)
+        }
+        WeChatCallbackCenter.shared.configure(
+            openURLHandler: { [weak self] url in
+                self?.handleWeChatOpenURL(url) ?? false
+            },
+            universalLinkHandler: { [weak self] userActivity in
+                self?.handleWeChatUniversalLink(userActivity) ?? false
+            }
+        )
     }
 
     var selectedConversation: Conversation? {
@@ -86,11 +98,63 @@ final class MessengerStore: ObservableObject {
 
     func shareOfficialLink(to target: WeChatShareTarget) {
         shareState = .checking
+        lastWeChatCallback = nil
         do {
             try openSDKBridge.shareLink(config: bridgeConfig, target: target)
-            shareState = .connected(Date())
+            shareState = .waitingForCallback(Date())
         } catch {
             shareState = .failed(error.localizedDescription)
         }
+    }
+
+    @discardableResult
+    func handleWeChatOpenURL(_ url: URL) -> Bool {
+        let key = "url:\(url.absoluteString)"
+        guard shouldHandleWeChatCallback(key: key) else { return true }
+
+        do {
+            try openSDKBridge.handleOpenURL(url)
+            return true
+        } catch {
+            shareState = .failed(error.localizedDescription)
+            return false
+        }
+    }
+
+    @discardableResult
+    func handleWeChatUniversalLink(_ userActivity: NSUserActivity) -> Bool {
+        let key = "universal:\(userActivity.webpageURL?.absoluteString ?? userActivity.activityType)"
+        guard shouldHandleWeChatCallback(key: key) else { return true }
+
+        do {
+            try openSDKBridge.handleUniversalLink(userActivity)
+            return true
+        } catch {
+            shareState = .failed(error.localizedDescription)
+            return false
+        }
+    }
+
+    private func applyWeChatShareCallback(_ callback: WeChatShareCallback) {
+        switch callback.status {
+        case .completed:
+            shareState = .connected(Date())
+        case .cancelled:
+            shareState = .cancelled(callback.message)
+        case .failed:
+            shareState = .failed(callback.message)
+        }
+        lastWeChatCallback = nil
+    }
+
+    private func shouldHandleWeChatCallback(key: String) -> Bool {
+        let now = Date()
+        if let lastWeChatCallback,
+           lastWeChatCallback.key == key,
+           now.timeIntervalSince(lastWeChatCallback.date) < 2 {
+            return false
+        }
+        lastWeChatCallback = (key, now)
+        return true
     }
 }

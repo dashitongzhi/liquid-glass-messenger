@@ -48,6 +48,12 @@ The SwiftUI app is prepared for the official WeChat OpenSDK link-card path:
 Without the OpenSDK linked, the app still builds and shows the configuration
 surface, but native share buttons report that the SDK is unavailable.
 
+The checked-in `WECHAT_APP_URL_SCHEME` value is a demo placeholder. Native
+OpenSDK sharing is blocked in Demo Sandbox mode and fails fast outside demo mode
+until the placeholder is replaced with the production scheme registered in
+WeChat Open Platform. After `WXApi.send` accepts a request, the UI waits for the
+WeChat callback and only marks the share confirmed from the OpenSDK response.
+
 ## Run
 
 ```bash
