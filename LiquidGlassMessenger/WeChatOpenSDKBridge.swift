@@ -9,7 +9,7 @@ import WechatOpenSDK
 #endif
 
 @MainActor
-final class WeChatOpenSDKBridge: NSObject {
+final class WeChatOpenSDKBridge: NSObject, WeChatOpenSDKHandling {
     var onShareResponse: ((WeChatShareCallback) -> Void)?
 
     func registerIfAvailable(config: WeChatBridgeConfig) throws {

@@ -1,4 +1,14 @@
+import Combine
 import Foundation
+
+@MainActor
+protocol WeChatOpenSDKHandling: AnyObject {
+    var onShareResponse: ((WeChatShareCallback) -> Void)? { get set }
+
+    func shareLink(config: WeChatBridgeConfig, target: WeChatShareTarget) throws
+    func handleOpenURL(_ url: URL) throws -> Bool
+    func handleUniversalLink(_ userActivity: NSUserActivity) throws -> Bool
+}
 
 @MainActor
 final class MessengerStore: ObservableObject {
@@ -14,10 +24,16 @@ final class MessengerStore: ObservableObject {
     @Published var capabilities: [WeChatCapability] = WeChatBridge.defaultCapabilities
 
     private let bridge = WeChatBridge()
-    private let openSDKBridge = WeChatOpenSDKBridge()
+    private let openSDKBridge: WeChatOpenSDKHandling
+    private let now: () -> Date
     private var lastWeChatCallback: (key: String, date: Date)?
 
-    init() {
+    init(
+        openSDKBridge: WeChatOpenSDKHandling = WeChatOpenSDKBridge(),
+        now: @escaping () -> Date = Date.init
+    ) {
+        self.openSDKBridge = openSDKBridge
+        self.now = now
         selectedConversationID = conversations.first?.id
         openSDKBridge.onShareResponse = { [weak self] callback in
             self?.applyWeChatShareCallback(callback)
@@ -144,11 +160,10 @@ final class MessengerStore: ObservableObject {
         case .failed:
             shareState = .failed(callback.message)
         }
-        lastWeChatCallback = nil
     }
 
     private func shouldHandleWeChatCallback(key: String) -> Bool {
-        let now = Date()
+        let now = now()
         if let lastWeChatCallback,
            lastWeChatCallback.key == key,
            now.timeIntervalSince(lastWeChatCallback.date) < 2 {
