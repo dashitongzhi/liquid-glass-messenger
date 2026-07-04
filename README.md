@@ -15,8 +15,9 @@ Messages/iMessage without bundling proprietary Apple or WeChat assets.
 - WeChat bridge architecture for official WeChat/WeCom/Open Platform endpoints.
 - Settings surface for app id, secret, token, encoding AES key, webhook URL, and
   connection mode.
-- `PluginGlassKit`, an Objective-C/UIKit Liquid Glass UI layer for Theos-style
-  WeChat tweak projects that need the same floating glass controls.
+- `PluginGlassKit`, an Objective-C/UIKit Liquid Glass UI layer plus a
+  packageable Theos plugin shell for WeChat tweak projects that need the same
+  floating glass controls.
 - Official WeChat link-card configuration surface for AppID, Universal Link,
   share title, description, URL, thumbnail asset name, and WeChat share targets.
 - Offline demo data so the app can be inspected immediately.
@@ -32,6 +33,21 @@ The project intentionally does not include a WeChat IPA hook, injected dynamic
 library, anti-recall tweak, envelope automation, location spoofing, or a
 modified personal WeChat client. Those approaches are useful only as reverse
 engineering references and are not part of the public app.
+
+The plugin shell under `PluginGlassKit/Plugin` does build as an injected Theos
+tweak, but its default behavior is limited to safe UI mounting, text insertion,
+and clipboard/status fallbacks.
+
+## Plugin Build
+
+```bash
+./script/build_plugin.sh
+./script/build_plugin.sh SCHEME=rootless
+./script/build_plugin.sh SCHEME=roothide
+```
+
+The plugin build requires Theos through the `THEOS` environment variable. The
+generated package targets the WeChat bundle `com.tencent.xin`.
 
 ## Official WeChat Setup
 
