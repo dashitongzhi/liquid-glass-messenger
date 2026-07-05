@@ -31,13 +31,19 @@ final class WeChatCallbackCenter {
 
     private var openURLHandler: ((URL) -> Bool)?
     private var universalLinkHandler: ((NSUserActivity) -> Bool)?
+    private var openURLMatcher: ((URL) -> Bool)?
+    private var universalLinkMatcher: ((NSUserActivity) -> Bool)?
     private var pendingURLs: [URL] = []
     private var pendingUniversalLinks: [NSUserActivity] = []
 
     func configure(
+        openURLMatcher: @escaping (URL) -> Bool,
+        universalLinkMatcher: @escaping (NSUserActivity) -> Bool,
         openURLHandler: @escaping (URL) -> Bool,
         universalLinkHandler: @escaping (NSUserActivity) -> Bool
     ) {
+        self.openURLMatcher = openURLMatcher
+        self.universalLinkMatcher = universalLinkMatcher
         self.openURLHandler = openURLHandler
         self.universalLinkHandler = universalLinkHandler
 
@@ -52,6 +58,7 @@ final class WeChatCallbackCenter {
 
     @discardableResult
     func handleOpenURL(_ url: URL) -> Bool {
+        guard openURLMatcher?(url) == true else { return false }
         guard let openURLHandler else {
             pendingURLs.append(url)
             return true
@@ -61,11 +68,21 @@ final class WeChatCallbackCenter {
 
     @discardableResult
     func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool {
+        guard universalLinkMatcher?(userActivity) == true else { return false }
         guard let universalLinkHandler else {
             pendingUniversalLinks.append(userActivity)
             return true
         }
         return universalLinkHandler(userActivity)
+    }
+
+    func resetForTesting() {
+        openURLHandler = nil
+        universalLinkHandler = nil
+        openURLMatcher = nil
+        universalLinkMatcher = nil
+        pendingURLs.removeAll()
+        pendingUniversalLinks.removeAll()
     }
 }
 
