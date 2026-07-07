@@ -112,21 +112,27 @@ final class MessengerStoreTests: XCTestCase {
     }
 
     func testCallbackCenterDeliversOpenURLReceivedBeforeMessengerStoreIsConfigured() {
-        resetCallbackCenter()
+        let bridgeConfig = makeBridgeConfig()
+        resetCallbackCenter(openURLMatcher: { url in
+            WeChatCallbackMatcher.isExpectedWeChatOpenURL(url, config: bridgeConfig)
+        })
 
         let url = URL(string: "wx123://pay?nonce=abc")!
 
         XCTAssertTrue(WeChatCallbackCenter.shared.handleOpenURL(url))
 
         let bridge = SpyOpenSDKBridge()
-        let store = makeStore(openSDKBridge: bridge)
+        let store = makeStore(openSDKBridge: bridge, bridgeConfig: bridgeConfig)
 
         XCTAssertEqual(bridge.handledOpenURLs, [url])
         XCTAssertTrue(store.shareState.isConnected)
     }
 
     func testCallbackCenterDeliversUniversalLinkReceivedBeforeMessengerStoreIsConfigured() {
-        resetCallbackCenter()
+        let bridgeConfig = makeBridgeConfig()
+        resetCallbackCenter(universalLinkMatcher: { userActivity in
+            WeChatCallbackMatcher.isExpectedWeChatUniversalLink(userActivity, config: bridgeConfig)
+        })
 
         let url = URL(string: "https://example.com/app/wechat/callback?nonce=abc")!
         let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
@@ -141,12 +147,12 @@ final class MessengerStoreTests: XCTestCase {
         XCTAssertTrue(store.shareState.isConnected)
     }
 
-    func testCallbackCenterDoesNotForwardUnrelatedOpenURLQueuedBeforeMessengerStoreIsConfigured() {
+    func testCallbackCenterDoesNotClaimUnrelatedOpenURLBeforeMessengerStoreIsConfigured() {
         resetCallbackCenter()
 
         let url = URL(string: "liquidglass://conversation/123")!
 
-        XCTAssertTrue(WeChatCallbackCenter.shared.handleOpenURL(url))
+        XCTAssertFalse(WeChatCallbackCenter.shared.handleOpenURL(url))
 
         let bridge = SpyOpenSDKBridge()
         _ = makeStore(openSDKBridge: bridge)
@@ -154,8 +160,28 @@ final class MessengerStoreTests: XCTestCase {
         XCTAssertTrue(bridge.handledOpenURLs.isEmpty)
     }
 
-    private func resetCallbackCenter() {
-        WeChatCallbackCenter.shared.resetForTesting()
+    func testCallbackCenterDoesNotClaimUnrelatedUniversalLinkBeforeMessengerStoreIsConfigured() {
+        resetCallbackCenter()
+
+        let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+        userActivity.webpageURL = URL(string: "https://example.com/app/wechatty/callback?nonce=abc")!
+
+        XCTAssertFalse(WeChatCallbackCenter.shared.handleUniversalLink(userActivity))
+
+        let bridge = SpyOpenSDKBridge()
+        _ = makeStore(openSDKBridge: bridge)
+
+        XCTAssertTrue(bridge.handledUniversalLinks.isEmpty)
+    }
+
+    private func resetCallbackCenter(
+        openURLMatcher: ((URL) -> Bool)? = WeChatCallbackMatcher.isRegisteredWeChatOpenURL,
+        universalLinkMatcher: ((NSUserActivity) -> Bool)? = WeChatCallbackMatcher.isDefaultWeChatUniversalLink
+    ) {
+        WeChatCallbackCenter.shared.resetForTesting(
+            openURLMatcher: openURLMatcher,
+            universalLinkMatcher: universalLinkMatcher
+        )
     }
 }
 
@@ -192,12 +218,17 @@ private final class SpyOpenSDKBridge: WeChatOpenSDKHandling {
 @MainActor
 private func makeStore(
     openSDKBridge: SpyOpenSDKBridge,
+    bridgeConfig: WeChatBridgeConfig = makeBridgeConfig(),
     now: @escaping () -> Date = Date.init
 ) -> MessengerStore {
+    MessengerStore(openSDKBridge: openSDKBridge, bridgeConfig: bridgeConfig, now: now)
+}
+
+private func makeBridgeConfig() -> WeChatBridgeConfig {
     var bridgeConfig = WeChatBridgeConfig()
     bridgeConfig.appID = "wx123"
     bridgeConfig.universalLink = "https://example.com/app/wechat/"
-    return MessengerStore(openSDKBridge: openSDKBridge, bridgeConfig: bridgeConfig, now: now)
+    return bridgeConfig
 }
 
 private extension BridgeConnectionState {

@@ -42,10 +42,12 @@ final class MessengerStore: ObservableObject {
         }
         WeChatCallbackCenter.shared.configure(
             openURLMatcher: { [weak self] url in
-                self?.isExpectedWeChatOpenURL(url) ?? false
+                guard let self else { return false }
+                return WeChatCallbackMatcher.isExpectedWeChatOpenURL(url, config: self.bridgeConfig)
             },
             universalLinkMatcher: { [weak self] userActivity in
-                self?.isExpectedWeChatUniversalLink(userActivity) ?? false
+                guard let self else { return false }
+                return WeChatCallbackMatcher.isExpectedWeChatUniversalLink(userActivity, config: self.bridgeConfig)
             },
             openURLHandler: { [weak self] url in
                 self?.handleWeChatOpenURL(url) ?? false
@@ -133,7 +135,7 @@ final class MessengerStore: ObservableObject {
 
     @discardableResult
     func handleWeChatOpenURL(_ url: URL) -> Bool {
-        guard isExpectedWeChatOpenURL(url) else { return false }
+        guard WeChatCallbackMatcher.isExpectedWeChatOpenURL(url, config: bridgeConfig) else { return false }
 
         let key = "url:\(url.absoluteString)"
         guard shouldHandleWeChatCallback(key: key) else { return true }
@@ -153,7 +155,7 @@ final class MessengerStore: ObservableObject {
 
     @discardableResult
     func handleWeChatUniversalLink(_ userActivity: NSUserActivity) -> Bool {
-        guard isExpectedWeChatUniversalLink(userActivity) else { return false }
+        guard WeChatCallbackMatcher.isExpectedWeChatUniversalLink(userActivity, config: bridgeConfig) else { return false }
 
         let key = "universal:\(userActivity.webpageURL?.absoluteString ?? userActivity.activityType)"
         guard shouldHandleWeChatCallback(key: key) else { return true }
@@ -191,53 +193,5 @@ final class MessengerStore: ObservableObject {
         }
         lastWeChatCallback = (key, now)
         return true
-    }
-
-    private func isExpectedWeChatOpenURL(_ url: URL) -> Bool {
-        let expectedScheme = bridgeConfig.appID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !expectedScheme.isEmpty, let scheme = url.scheme else { return false }
-        return scheme.caseInsensitiveCompare(expectedScheme) == .orderedSame
-    }
-
-    private func isExpectedWeChatUniversalLink(_ userActivity: NSUserActivity) -> Bool {
-        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let webpageURL = userActivity.webpageURL else {
-            return false
-        }
-        return isExpectedWeChatUniversalLink(webpageURL)
-    }
-
-    private func isExpectedWeChatUniversalLink(_ url: URL) -> Bool {
-        let universalLink = bridgeConfig.universalLink.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let expectedURL = URL(string: universalLink),
-              let expectedScheme = expectedURL.scheme?.lowercased(),
-              expectedScheme.hasPrefix("http"),
-              let actualScheme = url.scheme?.lowercased(),
-              actualScheme == expectedScheme,
-              let expectedHost = expectedURL.host,
-              let actualHost = url.host,
-              expectedHost.caseInsensitiveCompare(actualHost) == .orderedSame,
-              normalizedHTTPPort(expectedURL) == normalizedHTTPPort(url) else {
-            return false
-        }
-
-        let expectedPath = expectedURL.path
-        guard !expectedPath.isEmpty, expectedPath != "/" else { return true }
-
-        let pathPrefix = expectedPath.hasSuffix("/") ? expectedPath : "\(expectedPath)/"
-        return url.path == expectedPath || url.path.hasPrefix(pathPrefix)
-    }
-
-    private func normalizedHTTPPort(_ url: URL) -> Int? {
-        if let port = url.port { return port }
-
-        switch url.scheme?.lowercased() {
-        case "http":
-            return 80
-        case "https":
-            return 443
-        default:
-            return nil
-        }
     }
 }
