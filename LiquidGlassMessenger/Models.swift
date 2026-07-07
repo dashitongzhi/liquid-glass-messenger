@@ -172,6 +172,8 @@ struct WeChatBridgeConfig: Codable, Hashable {
 enum BridgeConnectionState: Equatable {
     case ready
     case checking
+    case waitingForCallback(Date)
     case connected(Date)
+    case cancelled(String)
     case failed(String)
 }
