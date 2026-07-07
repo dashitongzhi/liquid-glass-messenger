@@ -1,0 +1,9 @@
+Package: com.kral.liquidglassmessengerplugin
+Name: LiquidGlassMessengerPlugin
+Version: 0.1-1
+Architecture: iphoneos-arm
+Description: Liquid Glass interface plugin shell for WeChat tweaks
+Maintainer: Kral
+Author: Kral
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 14.0)
