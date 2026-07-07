@@ -12,6 +12,15 @@ note() {
   printf 'smoke: %s\n' "$*"
 }
 
+lint_plist() {
+  local plist="$1"
+  if command -v plutil >/dev/null 2>&1; then
+    plutil -lint "$plist" >/dev/null || fail "${plist} is not valid"
+  else
+    note "plutil is not available; skipped ${plist} syntax lint"
+  fi
+}
+
 [[ -f Makefile ]] || fail "missing Makefile"
 [[ -f Tweak.xm ]] || fail "missing Tweak.xm"
 [[ -f LiquidGlassDemo.plist ]] || fail "missing LiquidGlassDemo.plist"
@@ -34,7 +43,7 @@ grep -q 'PLUGIN_GLASS_KIT_SOURCE_DIR' README.md || fail "README.md must document
 grep -q 'Host controller' README.md || fail "README.md must mark the host controller replacement"
 grep -q 'Mount point' README.md || fail "README.md must mark the mount point replacement"
 
-plutil -lint LiquidGlassDemo.plist >/dev/null || fail "LiquidGlassDemo.plist is not valid"
+lint_plist LiquidGlassDemo.plist
 grep -q '^Package:' control || fail "control is missing Package"
 grep -q '^Depends:' control || fail "control is missing Depends"
 

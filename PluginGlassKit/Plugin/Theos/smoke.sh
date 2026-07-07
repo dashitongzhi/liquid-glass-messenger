@@ -12,6 +12,15 @@ note() {
   printf 'smoke: %s\n' "$*"
 }
 
+lint_plist() {
+  local plist="$1"
+  if command -v plutil >/dev/null 2>&1; then
+    plutil -lint "$plist" >/dev/null || fail "${plist} is not valid"
+  else
+    note "plutil is not available; skipped ${plist} syntax lint"
+  fi
+}
+
 [[ -f Makefile ]] || fail "missing Makefile"
 [[ -f Tweak.xm ]] || fail "missing Tweak.xm"
 [[ -f LiquidGlassMessengerPlugin.plist ]] || fail "missing LiquidGlassMessengerPlugin.plist"
@@ -41,7 +50,7 @@ grep -q 'com.tencent.xin' LiquidGlassMessengerPlugin.plist || fail "plist must f
 grep -q 'LGWeChatEligibleControllerClassNames' "${runtime_dir}/LGWeChatPluginController.m" || fail "plugin controller must use an explicit class whitelist"
 ! grep -Eq 'chatHints|containsString:|viewContainsEditableInput|containsSubviewOfClass' "${runtime_dir}/LGWeChatPluginController.m" || fail "plugin controller must not use broad screen heuristics"
 
-plutil -lint LiquidGlassMessengerPlugin.plist >/dev/null || fail "LiquidGlassMessengerPlugin.plist is not valid"
+lint_plist LiquidGlassMessengerPlugin.plist
 grep -q '^Package:' control || fail "control is missing Package"
 grep -q '^Depends:' control || fail "control is missing Depends"
 
