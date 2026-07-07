@@ -30,9 +30,11 @@ final class MessengerStore: ObservableObject {
 
     init(
         openSDKBridge: WeChatOpenSDKHandling? = nil,
+        bridgeConfig: WeChatBridgeConfig = WeChatBridgeConfig(),
         now: @escaping () -> Date = Date.init
     ) {
         self.openSDKBridge = openSDKBridge ?? WeChatOpenSDKBridge()
+        self.bridgeConfig = bridgeConfig
         self.now = now
         selectedConversationID = conversations.first?.id
         self.openSDKBridge.onShareResponse = { [weak self] callback in

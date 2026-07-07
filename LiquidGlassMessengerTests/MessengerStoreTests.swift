@@ -111,12 +111,42 @@ final class MessengerStoreTests: XCTestCase {
         XCTAssertEqual(store.shareState, .failed("WeChat OpenSDK did not handle the callback URL."))
     }
 
-    func testCallbackCenterDoesNotQueueURLsBeforeWeChatMatcherIsConfigured() {
+    func testCallbackCenterDeliversOpenURLReceivedBeforeMessengerStoreIsConfigured() {
+        resetCallbackCenter()
+
+        let url = URL(string: "wx123://pay?nonce=abc")!
+
+        XCTAssertTrue(WeChatCallbackCenter.shared.handleOpenURL(url))
+
+        let bridge = SpyOpenSDKBridge()
+        let store = makeStore(openSDKBridge: bridge)
+
+        XCTAssertEqual(bridge.handledOpenURLs, [url])
+        XCTAssertTrue(store.shareState.isConnected)
+    }
+
+    func testCallbackCenterDeliversUniversalLinkReceivedBeforeMessengerStoreIsConfigured() {
+        resetCallbackCenter()
+
+        let url = URL(string: "https://example.com/app/wechat/callback?nonce=abc")!
+        let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+        userActivity.webpageURL = url
+
+        XCTAssertTrue(WeChatCallbackCenter.shared.handleUniversalLink(userActivity))
+
+        let bridge = SpyOpenSDKBridge()
+        let store = makeStore(openSDKBridge: bridge)
+
+        XCTAssertEqual(bridge.handledUniversalLinks, [url])
+        XCTAssertTrue(store.shareState.isConnected)
+    }
+
+    func testCallbackCenterDoesNotForwardUnrelatedOpenURLQueuedBeforeMessengerStoreIsConfigured() {
         resetCallbackCenter()
 
         let url = URL(string: "liquidglass://conversation/123")!
 
-        XCTAssertFalse(WeChatCallbackCenter.shared.handleOpenURL(url))
+        XCTAssertTrue(WeChatCallbackCenter.shared.handleOpenURL(url))
 
         let bridge = SpyOpenSDKBridge()
         _ = makeStore(openSDKBridge: bridge)
@@ -164,10 +194,10 @@ private func makeStore(
     openSDKBridge: SpyOpenSDKBridge,
     now: @escaping () -> Date = Date.init
 ) -> MessengerStore {
-    let store = MessengerStore(openSDKBridge: openSDKBridge, now: now)
-    store.bridgeConfig.appID = "wx123"
-    store.bridgeConfig.universalLink = "https://example.com/app/wechat/"
-    return store
+    var bridgeConfig = WeChatBridgeConfig()
+    bridgeConfig.appID = "wx123"
+    bridgeConfig.universalLink = "https://example.com/app/wechat/"
+    return MessengerStore(openSDKBridge: openSDKBridge, bridgeConfig: bridgeConfig, now: now)
 }
 
 private extension BridgeConnectionState {
