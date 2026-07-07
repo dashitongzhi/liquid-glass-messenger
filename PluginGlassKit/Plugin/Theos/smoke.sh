@@ -38,6 +38,8 @@ grep -q -- '-I$(PLUGIN_GLASS_KIT_SOURCE_DIR)' Makefile || fail "Makefile must ex
 grep -q '#import <LGWeChatPluginController.h>' Tweak.xm || fail "Tweak.xm should import plugin controller through the include path"
 grep -q 'installIfEligibleInViewController:self' Tweak.xm || fail "Tweak.xm must delegate install decisions"
 grep -q 'com.tencent.xin' LiquidGlassMessengerPlugin.plist || fail "plist must filter the WeChat bundle"
+grep -q 'LGWeChatEligibleControllerClassNames' "${runtime_dir}/LGWeChatPluginController.m" || fail "plugin controller must use an explicit class whitelist"
+! grep -Eq 'chatHints|containsString:|viewContainsEditableInput|containsSubviewOfClass' "${runtime_dir}/LGWeChatPluginController.m" || fail "plugin controller must not use broad screen heuristics"
 
 plutil -lint LiquidGlassMessengerPlugin.plist >/dev/null || fail "LiquidGlassMessengerPlugin.plist is not valid"
 grep -q '^Package:' control || fail "control is missing Package"

@@ -5,9 +5,29 @@ static NSInteger const LGWeChatPluginBarTag = 26063002;
 static NSString *const LGWeChatQuickReplyText = @"我稍后回复你。";
 
 @interface LGWeChatPluginController () <UITextFieldDelegate>
+@property (nonatomic, strong) NSMapTable<UIWindow *, UIView *> *activeHostViewsByWindow;
 @end
 
 @implementation LGWeChatPluginController
+
+static NSSet<NSString *> *LGWeChatEligibleControllerClassNames(void) {
+    static NSSet<NSString *> *classNames;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // Default to opt-in. Add exact, verified chat controller class names here.
+        classNames = [NSSet setWithArray:@[
+        ]];
+    });
+    return classNames;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _activeHostViewsByWindow = [NSMapTable weakToWeakObjectsMapTable];
+    }
+    return self;
+}
 
 + (instancetype)sharedController {
     static LGWeChatPluginController *controller;
@@ -22,7 +42,12 @@ static NSString *const LGWeChatQuickReplyText = @"我稍后回复你。";
     if (![self shouldAttachToViewController:viewController]) return;
 
     UIView *hostView = viewController.view;
-    if (!hostView || [hostView viewWithTag:LGWeChatPluginBarTag]) return;
+    UIWindow *window = hostView.window;
+    if (!hostView || !window) return;
+
+    UIView *activeHostView = [self.activeHostViewsByWindow objectForKey:window];
+    if (activeHostView && activeHostView.window == window) return;
+    if ([window viewWithTag:LGWeChatPluginBarTag]) return;
 
     LGGlassButton *reply = [LGGlassButton chipButtonWithTitle:@"快捷回复" symbolName:nil];
     reply.accessibilityLabel = @"Quick Reply";
@@ -44,33 +69,36 @@ static NSString *const LGWeChatQuickReplyText = @"我稍后回复你。";
     bar.tag = LGWeChatPluginBarTag;
     bar.textField.delegate = self;
     [bar attachToView:hostView keyboardAware:YES];
+    [self.activeHostViewsByWindow setObject:hostView forKey:window];
 }
 
 - (void)detachFromViewController:(UIViewController *)viewController {
-    UIView *bar = [viewController.view viewWithTag:LGWeChatPluginBarTag];
+    UIView *hostView = viewController.view;
+    UIWindow *window = hostView.window;
+    UIView *activeHostView = window ? [self.activeHostViewsByWindow objectForKey:window] : nil;
+    if (activeHostView && activeHostView != hostView) return;
+
+    UIView *barHostView = activeHostView ?: hostView;
+    UIView *bar = [barHostView viewWithTag:LGWeChatPluginBarTag];
     if ([bar respondsToSelector:@selector(dismiss)]) {
         [(LGGlassFloatingBar *)bar dismiss];
     } else {
         [bar removeFromSuperview];
     }
+    if (window) {
+        [self.activeHostViewsByWindow removeObjectForKey:window];
+    }
 }
 
 - (BOOL)shouldAttachToViewController:(UIViewController *)viewController {
-    if (!viewController.view.window && !viewController.isViewLoaded) return NO;
+    if (!viewController.isViewLoaded || !viewController.view.window) return NO;
     if ([viewController isKindOfClass:UIAlertController.class]) return NO;
 
     NSString *bundleID = NSBundle.mainBundle.bundleIdentifier;
     if (![bundleID isEqualToString:@"com.tencent.xin"]) return NO;
 
-    NSString *className = NSStringFromClass(viewController.class).lowercaseString;
-    NSArray<NSString *> *chatHints = @[@"chat", @"message", @"msg", @"conversation", @"session"];
-    for (NSString *hint in chatHints) {
-        if ([className containsString:hint]) return YES;
-    }
-
-    BOOL hasTimeline = [self view:viewController.view containsSubviewOfClass:UIScrollView.class];
-    BOOL hasEditableInput = [self viewContainsEditableInput:viewController.view excludingView:nil];
-    return hasTimeline && hasEditableInput;
+    NSString *className = NSStringFromClass(viewController.class);
+    return [LGWeChatEligibleControllerClassNames() containsObject:className];
 }
 
 - (void)handleQuickReply:(LGGlassButton *)sender {
@@ -130,26 +158,6 @@ static NSString *const LGWeChatQuickReplyText = @"我稍后回复你。";
 
     for (UIView *subview in view.subviews) {
         if ([self insertText:text intoFirstResponderInView:subview excludingView:excludedView]) return YES;
-    }
-    return NO;
-}
-
-- (BOOL)viewContainsEditableInput:(UIView *)view excludingView:(UIView *)excludedView {
-    if (!view || view == excludedView) return NO;
-    if ([view isKindOfClass:UITextField.class] || [view isKindOfClass:UITextView.class]) return YES;
-
-    for (UIView *subview in view.subviews) {
-        if ([self viewContainsEditableInput:subview excludingView:excludedView]) return YES;
-    }
-    return NO;
-}
-
-- (BOOL)view:(UIView *)view containsSubviewOfClass:(Class)targetClass {
-    if (!view) return NO;
-    if ([view isKindOfClass:targetClass]) return YES;
-
-    for (UIView *subview in view.subviews) {
-        if ([self view:subview containsSubviewOfClass:targetClass]) return YES;
     }
     return NO;
 }

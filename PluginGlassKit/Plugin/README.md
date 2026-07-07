@@ -36,6 +36,9 @@ The production entry point is `Plugin/Theos/Tweak.xm`. It hooks
 `UIViewController` in the WeChat process and delegates attach/detach decisions
 to `Plugin/Sources/LGWeChatPluginController.m`.
 
-To attach to exact WeChat controller classes in your own environment, replace
-`shouldAttachToViewController:` with a strict class whitelist. Keep feature
-actions in `LGWeChatPluginController` so the visual kit remains reusable.
+By default the shell is opt-in and does not attach to any WeChat screen. To
+enable it in your own environment, add exact, verified chat controller class
+names to `LGWeChatEligibleControllerClassNames`. The controller also keeps one
+active floating bar per window so container and child controller appearances do
+not create duplicate bars. Keep feature actions in `LGWeChatPluginController`
+so the visual kit remains reusable.
