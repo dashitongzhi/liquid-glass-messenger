@@ -23,7 +23,7 @@ endif
 
 .PHONY: smoke
 smoke:
-	@./smoke.sh
+	@env bash ./smoke.sh
 
 ifneq ($(filter smoke,$(MAKECMDGOALS)),smoke)
 
