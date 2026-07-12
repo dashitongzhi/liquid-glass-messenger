@@ -1,0 +1,26 @@
+name: iOS Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: >-
+          xcodebuild test
+          -project LiquidGlassMessenger.xcodeproj
+          -scheme LiquidGlassMessenger
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest'
+          CODE_SIGNING_ALLOWED=NO
+      - name: Verify plugin smoke targets
+        run: |
+          make -C PluginGlassKit/Plugin/Theos smoke
+          make -C PluginGlassKit/Examples/Theos smoke

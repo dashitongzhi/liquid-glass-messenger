@@ -313,6 +313,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = LiquidGlassMessenger/LiquidGlassMessenger.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2HD5836RZ2;
@@ -328,6 +329,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				WECHAT_APP_URL_SCHEME = wxReplaceWithOpenPlatformAppID;
+				WECHAT_ASSOCIATED_DOMAIN = example.com;
 			};
 			name = Debug;
 		};
@@ -335,6 +337,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = LiquidGlassMessenger/LiquidGlassMessenger.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2HD5836RZ2;
@@ -350,6 +353,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				WECHAT_APP_URL_SCHEME = wxReplaceWithOpenPlatformAppID;
+				WECHAT_ASSOCIATED_DOMAIN = example.com;
 			};
 			name = Release;
 		};
