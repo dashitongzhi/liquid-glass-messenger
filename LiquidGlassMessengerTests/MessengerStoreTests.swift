@@ -3,6 +3,106 @@ import XCTest
 
 @MainActor
 final class MessengerStoreTests: XCTestCase {
+    func testLinkPreviewRejectsCustomSchemesThatOnlyStartWithHTTP() {
+        var preview = WeChatLinkPreview()
+
+        preview.webpageURL = "httpx://evil.example/path"
+        XCTAssertFalse(preview.isValid)
+
+        preview.webpageURL = "httpsomething://evil.example/path"
+        XCTAssertFalse(preview.isValid)
+
+        preview.webpageURL = "https://example.com/path"
+        XCTAssertTrue(preview.isValid)
+    }
+
+    func testUniversalLinkMatcherRejectsCustomSchemesThatOnlyStartWithHTTP() {
+        var config = makeBridgeConfig()
+        config.universalLink = "httpx://example.com/app/wechat/"
+
+        XCTAssertFalse(
+            WeChatCallbackMatcher.isExpectedWeChatUniversalLink(
+                URL(string: "httpx://example.com/app/wechat/callback")!,
+                config: config
+            )
+        )
+    }
+
+    func testWeComAccessTokenURLUsesCorporateParameters() throws {
+        let url = try WeChatAPIEndpoint.weComAccessTokenURL(
+            corpID: "ww123",
+            corpSecret: "corporate-secret"
+        )
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let query = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
+
+        XCTAssertEqual(components.scheme, "https")
+        XCTAssertEqual(components.host, "qyapi.weixin.qq.com")
+        XCTAssertEqual(components.path, "/cgi-bin/gettoken")
+        XCTAssertEqual(query["corpid"], "ww123")
+        XCTAssertEqual(query["corpsecret"], "corporate-secret")
+        XCTAssertNil(query["appid"])
+        XCTAssertNil(query["secret"])
+    }
+
+    func testPublicBridgeConfigurationSurvivesNewStoreWithoutPersistingSecrets() {
+        resetCallbackCenter()
+
+        let storage = InMemoryWeChatBridgeConfigurationStore()
+        let firstStore = MessengerStore(openSDKBridge: SpyOpenSDKBridge(), configurationStore: storage)
+        var config = makeBridgeConfig()
+        config.mode = .openPlatform
+        config.appSecret = "session-only-secret"
+        config.token = "session-only-token"
+        config.encodingAESKey = "session-only-aes-key"
+        config.webhookURL = "https://example.com/webhook"
+        config.linkPreview.title = "Persisted title"
+        firstStore.bridgeConfig = config
+
+        let restoredStore = MessengerStore(openSDKBridge: SpyOpenSDKBridge(), configurationStore: storage)
+
+        XCTAssertEqual(restoredStore.bridgeConfig.mode, .openPlatform)
+        XCTAssertEqual(restoredStore.bridgeConfig.appID, config.appID)
+        XCTAssertEqual(restoredStore.bridgeConfig.universalLink, config.universalLink)
+        XCTAssertEqual(restoredStore.bridgeConfig.webhookURL, config.webhookURL)
+        XCTAssertEqual(restoredStore.bridgeConfig.linkPreview, config.linkPreview)
+        XCTAssertEqual(restoredStore.bridgeConfig.appSecret, "")
+        XCTAssertEqual(restoredStore.bridgeConfig.token, "")
+        XCTAssertEqual(restoredStore.bridgeConfig.encodingAESKey, "")
+    }
+
+    func testDefaultUniversalLinkMatcherUsesPersistedConfigurationBeforeStoreExists() {
+        let storage = InMemoryWeChatBridgeConfigurationStore()
+        var config = makeBridgeConfig()
+        config.universalLink = "https://callback.example.com/wechat/"
+        storage.save(WeChatBridgePersistentConfiguration(config: config))
+
+        let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+        userActivity.webpageURL = URL(string: "https://callback.example.com/wechat/result?state=abc")!
+
+        XCTAssertTrue(
+            WeChatCallbackMatcher.isDefaultWeChatUniversalLink(
+                userActivity,
+                configurationStore: storage
+            )
+        )
+    }
+
+    func testProductionBridgeValidationDoesNotClaimConnectedWithoutVerification() async {
+        resetCallbackCenter()
+
+        var config = makeBridgeConfig()
+        config.mode = .officialAccount
+        config.appSecret = "session-only-secret"
+        let store = makeStore(openSDKBridge: SpyOpenSDKBridge(), bridgeConfig: config)
+
+        await store.refreshFromWeChat()
+
+        guard case .configured = store.connectionState else {
+            return XCTFail("Expected configuration validation state, got \(store.connectionState)")
+        }
+    }
+
     func testDuplicateOpenURLFromAppDelegateAndSwiftUIOnlyReachesOpenSDKOnce() {
         resetCallbackCenter()
 
@@ -212,6 +312,18 @@ private final class SpyOpenSDKBridge: WeChatOpenSDKHandling {
             onShareResponse?(callback)
         }
         return universalLinkResult
+    }
+}
+
+private final class InMemoryWeChatBridgeConfigurationStore: WeChatBridgeConfigurationStoring {
+    var configuration: WeChatBridgePersistentConfiguration?
+
+    func load() -> WeChatBridgePersistentConfiguration? {
+        configuration
+    }
+
+    func save(_ configuration: WeChatBridgePersistentConfiguration) {
+        self.configuration = configuration
     }
 }
 

@@ -19,7 +19,7 @@ struct SettingsView: View {
                 Button {
                     Task { await store.refreshFromWeChat() }
                 } label: {
-                    Label("Check Bridge", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Validate Configuration", systemImage: "checkmark.shield")
                 }
             }
 
@@ -28,10 +28,10 @@ struct SettingsView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                 SecureField("AppSecret", text: $store.bridgeConfig.appSecret)
-                TextField("Token", text: $store.bridgeConfig.token)
+                SecureField("Token", text: $store.bridgeConfig.token)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                TextField("EncodingAESKey", text: $store.bridgeConfig.encodingAESKey)
+                SecureField("EncodingAESKey", text: $store.bridgeConfig.encodingAESKey)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             }
@@ -40,9 +40,10 @@ struct SettingsView: View {
                 TextField("Webhook URL", text: $store.bridgeConfig.webhookURL)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
-                TextField("API Base URL", text: $store.bridgeConfig.apiBaseURL)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
+                LabeledContent("Official API") {
+                    Text("api.weixin.qq.com")
+                        .foregroundStyle(.secondary)
+                }
                 TextField("Universal Link", text: $store.bridgeConfig.universalLink)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
@@ -90,6 +91,10 @@ struct SettingsView: View {
             Text("Ready").foregroundStyle(.secondary)
         case .checking:
             ProgressView()
+        case .configured(let message):
+            Text(message)
+                .foregroundStyle(.orange)
+                .multilineTextAlignment(.trailing)
         case .waitingForCallback:
             Text("Waiting").foregroundStyle(.secondary)
         case .connected(let date):
@@ -113,6 +118,10 @@ struct SettingsView: View {
             Text("Ready").foregroundStyle(.secondary)
         case .checking:
             ProgressView()
+        case .configured(let message):
+            Text(message)
+                .foregroundStyle(.orange)
+                .multilineTextAlignment(.trailing)
         case .waitingForCallback(let date):
             Text("Waiting for WeChat \(ChatFormatters.shortTime.string(from: date))")
                 .foregroundStyle(.secondary)

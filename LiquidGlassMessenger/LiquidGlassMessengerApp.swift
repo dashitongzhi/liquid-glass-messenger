@@ -104,7 +104,18 @@ enum WeChatCallbackMatcher {
     }
 
     static func isDefaultWeChatUniversalLink(_ userActivity: NSUserActivity) -> Bool {
-        isExpectedWeChatUniversalLink(userActivity, config: WeChatBridgeConfig())
+        isDefaultWeChatUniversalLink(
+            userActivity,
+            configurationStore: UserDefaultsWeChatBridgeConfigurationStore()
+        )
+    }
+
+    static func isDefaultWeChatUniversalLink(
+        _ userActivity: NSUserActivity,
+        configurationStore: WeChatBridgeConfigurationStoring
+    ) -> Bool {
+        let config = configurationStore.load().map(WeChatBridgeConfig.init(persistentConfiguration:)) ?? WeChatBridgeConfig()
+        return isExpectedWeChatUniversalLink(userActivity, config: config)
     }
 
     static func isExpectedWeChatOpenURL(_ url: URL, config: WeChatBridgeConfig) -> Bool {
@@ -125,7 +136,7 @@ enum WeChatCallbackMatcher {
         let universalLink = config.universalLink.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let expectedURL = URL(string: universalLink),
               let expectedScheme = expectedURL.scheme?.lowercased(),
-              expectedScheme.hasPrefix("http"),
+              expectedScheme == "https",
               let actualScheme = url.scheme?.lowercased(),
               actualScheme == expectedScheme,
               let expectedHost = expectedURL.host,
