@@ -43,7 +43,6 @@ else
 fi
 
 echo "Building $SCHEME for $DESTINATION..."
-set +e
 xcodebuild \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
@@ -52,13 +51,9 @@ xcodebuild \
   -destination "$DESTINATION" \
   CODE_SIGNING_ALLOWED="$SIGNING_ALLOWED" \
   build
-BUILD_STATUS=$?
-set -e
 
 if [[ -n "$DEVICE_ID" ]]; then
   APP="$DERIVED_DATA/Build/Products/Debug-iphoneos/$SCHEME.app"
-  XCENT="$DERIVED_DATA/Build/Intermediates.noindex/LiquidGlassMessenger.build/Debug-iphoneos/LiquidGlassMessenger.build/LiquidGlassMessenger.app.xcent"
-  IDENTITY="${CODE_SIGN_IDENTITY_HASH:-D995CAF7456CE9A2210AB48CAA847AAB86F041DC}"
 else
   APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/$SCHEME.app"
 fi
@@ -68,16 +63,8 @@ if [[ ! -d "$APP" ]]; then
   exit 1
 fi
 
-if [[ "$BUILD_STATUS" -ne 0 && -z "$DEVICE_ID" ]]; then
-  exit "$BUILD_STATUS"
-fi
-
 if [[ -n "$DEVICE_ID" ]]; then
-  xattr -cr "$APP"
-  if [[ -f "$XCENT" ]]; then
-    /usr/bin/codesign --force --sign "$IDENTITY" --entitlements "$XCENT" --timestamp=none --generate-entitlement-der "$APP"
-    /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP"
-  fi
+  /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP"
   DEVELOPER_DIR="$DEVELOPER_DIR" xcrun devicectl device install app --device "$DEVICE_ID" "$APP"
   if [[ "$LAUNCH" -eq 1 ]]; then
     DEVELOPER_DIR="$DEVELOPER_DIR" xcrun devicectl device process launch --terminate-existing --device "$DEVICE_ID" Kral.LiquidGlassMessenger
