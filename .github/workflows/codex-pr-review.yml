@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   codex-review:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
 
     steps:
@@ -136,7 +137,7 @@ jobs:
           responses-api-endpoint: ${{ vars.CODEX_REVIEW_RESPONSES_ENDPOINT }}
           model: ${{ vars.CODEX_REVIEW_MODEL }}
           sandbox: read-only
-          allow-users: "*"
+          allow-users: "dashitongzhi"
           prompt-file: .codex-pr-review-prompt.md
           output-file: .codex-pr-review.md
 

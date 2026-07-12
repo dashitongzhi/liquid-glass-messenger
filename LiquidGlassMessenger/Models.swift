@@ -142,7 +142,7 @@ struct WeChatLinkPreview: Hashable, Codable {
 
     var isValid: Bool {
         guard let url = URL(string: webpageURL.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
-        return url.scheme?.hasPrefix("http") == true && url.host != nil
+        return url.scheme?.lowercased() == "https" && url.host != nil
     }
 }
 
@@ -153,7 +153,6 @@ struct WeChatBridgeConfig: Codable, Hashable {
     var token: String = ""
     var encodingAESKey: String = ""
     var webhookURL: String = "https://example.com/wechat/webhook"
-    var apiBaseURL: String = "https://api.weixin.qq.com"
     var universalLink: String = "https://example.com/app/wechat/"
     var linkPreview = WeChatLinkPreview()
 
@@ -165,13 +164,67 @@ struct WeChatBridgeConfig: Codable, Hashable {
     var isOpenSDKConfigured: Bool {
         let appID = appID.trimmingCharacters(in: .whitespacesAndNewlines)
         let universalLink = universalLink.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !appID.isEmpty && URL(string: universalLink)?.scheme?.hasPrefix("http") == true
+        return !appID.isEmpty && URL(string: universalLink)?.scheme?.lowercased() == "https"
+    }
+}
+
+struct WeChatBridgePersistentConfiguration: Codable, Equatable {
+    var mode: WeChatMode
+    var appID: String
+    var webhookURL: String
+    var universalLink: String
+    var linkPreview: WeChatLinkPreview
+
+    init(config: WeChatBridgeConfig) {
+        mode = config.mode
+        appID = config.appID
+        webhookURL = config.webhookURL
+        universalLink = config.universalLink
+        linkPreview = config.linkPreview
+    }
+}
+
+extension WeChatBridgeConfig {
+    init(persistentConfiguration: WeChatBridgePersistentConfiguration) {
+        self.init()
+        mode = persistentConfiguration.mode
+        appID = persistentConfiguration.appID
+        webhookURL = persistentConfiguration.webhookURL
+        universalLink = persistentConfiguration.universalLink
+        linkPreview = persistentConfiguration.linkPreview
+    }
+}
+
+protocol WeChatBridgeConfigurationStoring: AnyObject {
+    func load() -> WeChatBridgePersistentConfiguration?
+    func save(_ configuration: WeChatBridgePersistentConfiguration)
+}
+
+final class UserDefaultsWeChatBridgeConfigurationStore: WeChatBridgeConfigurationStoring {
+    private static let storageKey = "weChatBridgePersistentConfiguration"
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func load() -> WeChatBridgePersistentConfiguration? {
+        guard let data = defaults.data(forKey: Self.storageKey) else { return nil }
+        return try? JSONDecoder().decode(WeChatBridgePersistentConfiguration.self, from: data)
+    }
+
+    func save(_ configuration: WeChatBridgePersistentConfiguration) {
+        guard let data = try? JSONEncoder().encode(configuration) else { return }
+        defaults.set(data, forKey: Self.storageKey)
     }
 }
 
 enum BridgeConnectionState: Equatable {
     case ready
     case checking
+    case configured(String)
+    case waitingForCallback(Date)
     case connected(Date)
+    case cancelled(String)
     case failed(String)
 }

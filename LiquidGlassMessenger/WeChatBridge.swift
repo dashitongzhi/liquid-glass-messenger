@@ -25,24 +25,39 @@ private struct WeChatAPIResult: Decodable {
 }
 
 enum WeChatBridgeError: LocalizedError {
+    case demoOpenSDKShareBlocked
     case missingCredentials
     case missingOpenSDKConfiguration
+    case placeholderURLScheme(String)
+    case missingConfiguredURLScheme(String)
     case invalidShareURL
     case openSDKUnavailable
+    case shareRequestRejected
+    case callbackNotHandled
     case unsupportedPrivateProtocol(String)
     case invalidURL
     case apiError(String)
 
     var errorDescription: String? {
         switch self {
+        case .demoOpenSDKShareBlocked:
+            "Demo mode does not invoke WeChat OpenSDK. Switch to Open Platform mode and configure a production AppID, Universal Link, and URL scheme."
         case .missingCredentials:
             "WeChat credentials are missing. Add official AppID and AppSecret in Settings."
         case .missingOpenSDKConfiguration:
             "WeChat OpenSDK needs an AppID and Universal Link before sharing."
+        case .placeholderURLScheme(let scheme):
+            "Replace the placeholder WECHAT_APP_URL_SCHEME (\(scheme)) before using WeChat OpenSDK outside demo mode."
+        case .missingConfiguredURLScheme(let scheme):
+            "Info.plist must register the WeChat URL scheme \(scheme) for OpenSDK callbacks."
         case .invalidShareURL:
             "The WeChat link card URL must be a valid http or https URL."
         case .openSDKUnavailable:
             "WeChat OpenSDK is not linked in this build. Add the official SDK to enable native sharing."
+        case .shareRequestRejected:
+            "WeChat OpenSDK rejected the share request before opening WeChat."
+        case .callbackNotHandled:
+            "WeChat OpenSDK did not handle the callback URL."
         case .unsupportedPrivateProtocol(let feature):
             "\(feature) is not exposed through public WeChat APIs."
         case .invalidURL:
@@ -50,6 +65,36 @@ enum WeChatBridgeError: LocalizedError {
         case .apiError(let message):
             message
         }
+    }
+}
+
+enum WeChatAPIEndpoint {
+    static func officialAccountAccessTokenURL(appID: String, appSecret: String) throws -> URL {
+        try url(
+            baseURL: "https://api.weixin.qq.com/cgi-bin/token",
+            queryItems: [
+                URLQueryItem(name: "grant_type", value: "client_credential"),
+                URLQueryItem(name: "appid", value: appID),
+                URLQueryItem(name: "secret", value: appSecret)
+            ]
+        )
+    }
+
+    static func weComAccessTokenURL(corpID: String, corpSecret: String) throws -> URL {
+        try url(
+            baseURL: "https://qyapi.weixin.qq.com/cgi-bin/gettoken",
+            queryItems: [
+                URLQueryItem(name: "corpid", value: corpID),
+                URLQueryItem(name: "corpsecret", value: corpSecret)
+            ]
+        )
+    }
+
+    private static func url(baseURL: String, queryItems: [URLQueryItem]) throws -> URL {
+        var components = URLComponents(string: baseURL)
+        components?.queryItems = queryItems
+        guard let url = components?.url else { throw WeChatBridgeError.invalidURL }
+        return url
     }
 }
 
@@ -111,17 +156,16 @@ actor WeChatBridge {
             })
         }
 
-        guard config.isCredentialed else { throw WeChatBridgeError.missingCredentials }
-        return WeChatBridgeRefresh(capabilities: Self.defaultCapabilities.map { item in
-            var item = item
-            if item.status == .requiresCredential {
-                item.status = .available
-            }
-            if item.id == "open-sdk-link-share", !config.isOpenSDKConfigured {
-                item.status = .requiresCredential
-            }
-            return item
-        })
+        switch config.mode {
+        case .demo:
+            return WeChatBridgeRefresh(capabilities: Self.defaultCapabilities)
+        case .openPlatform:
+            guard config.isOpenSDKConfigured else { throw WeChatBridgeError.missingOpenSDKConfiguration }
+        case .officialAccount, .weCom:
+            guard config.isCredentialed else { throw WeChatBridgeError.missingCredentials }
+        }
+
+        return WeChatBridgeRefresh(capabilities: Self.defaultCapabilities)
     }
 
     func oauthURL(config: WeChatBridgeConfig, redirectURI: String, state: String) throws -> URL {
@@ -139,21 +183,15 @@ actor WeChatBridge {
 
     func fetchOfficialAccountAccessToken(config: WeChatBridgeConfig) async throws -> String {
         guard config.isCredentialed else { throw WeChatBridgeError.missingCredentials }
-        var components = URLComponents(string: "\(config.apiBaseURL)/cgi-bin/token")
-        components?.queryItems = [
-            URLQueryItem(name: "grant_type", value: "client_credential"),
-            URLQueryItem(name: "appid", value: config.appID),
-            URLQueryItem(name: "secret", value: config.appSecret)
-        ]
-        guard let url = components?.url else { throw WeChatBridgeError.invalidURL }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let decoded = try JSONDecoder().decode(AccessTokenResponse.self, from: data)
-        if let token = decoded.accessToken { return token }
-        throw WeChatBridgeError.apiError(decoded.errmsg ?? "WeChat access_token request failed.")
+        let url = try WeChatAPIEndpoint.officialAccountAccessTokenURL(
+            appID: config.appID,
+            appSecret: config.appSecret
+        )
+        return try await fetchAccessToken(from: url)
     }
 
     func sendOfficialAccountText(openID: String, text: String, accessToken: String, config: WeChatBridgeConfig) async throws {
-        var components = URLComponents(string: "\(config.apiBaseURL)/cgi-bin/message/custom/send")
+        var components = URLComponents(string: "https://api.weixin.qq.com/cgi-bin/message/custom/send")
         components?.queryItems = [URLQueryItem(name: "access_token", value: accessToken)]
         guard let url = components?.url else { throw WeChatBridgeError.invalidURL }
 
@@ -166,11 +204,8 @@ actor WeChatBridge {
     }
 
     func sendWeComText(corpID: String, corpSecret: String, agentID: Int, toUser: String, text: String) async throws {
-        var config = WeChatBridgeConfig()
-        config.appID = corpID
-        config.appSecret = corpSecret
-        config.apiBaseURL = "https://qyapi.weixin.qq.com"
-        let accessToken = try await fetchOfficialAccountAccessToken(config: config)
+        let accessTokenURL = try WeChatAPIEndpoint.weComAccessTokenURL(corpID: corpID, corpSecret: corpSecret)
+        let accessToken = try await fetchAccessToken(from: accessTokenURL)
         var components = URLComponents(string: "https://qyapi.weixin.qq.com/cgi-bin/message/send")
         components?.queryItems = [URLQueryItem(name: "access_token", value: accessToken)]
         guard let url = components?.url else { throw WeChatBridgeError.invalidURL }
@@ -207,5 +242,12 @@ actor WeChatBridge {
         guard result.errcode == 0 else {
             throw WeChatBridgeError.apiError(result.errmsg)
         }
+    }
+
+    private func fetchAccessToken(from url: URL) async throws -> String {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let decoded = try JSONDecoder().decode(AccessTokenResponse.self, from: data)
+        if let token = decoded.accessToken { return token }
+        throw WeChatBridgeError.apiError(decoded.errmsg ?? "WeChat access_token request failed.")
     }
 }
